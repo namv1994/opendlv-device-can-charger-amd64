@@ -1,0 +1,39 @@
+int encode(uint8_t *dst, uint8_t len);
+int encode(uint8_t *dst, uint8_t len) {
+    if ( (nullptr == dst) || (0 == len) ) return 0;
+    // TODO: Provide logic to check what messages to actually encode; the code in the
+    //       following is mainly template code for illustration.
+ 
+    // Message to encode: CHARGERGW_CHARGER_FRAME_ID
+    {
+        chargergw_charger_t tmp;
+        memset(&tmp, 0, sizeof(tmp));
+        // The following msg would have to be passed to this encoder externally.
+        opendlv::proxy::Charger msg;
+        tmp.voltage2 = chargergw_charger_voltage2_encode(msg.voltage2());
+        tmp.current2 = chargergw_charger_current2_encode(msg.current2());
+        // The following statement packs the encoded values into a CAN frame.
+        int size = chargergw_charger_pack(dst, &tmp, len);
+        return size;
+    }
+}
+void decode(uint16_t canFrameID, uint8_t *src, uint8_t len);
+void decode(uint16_t canFrameID, uint8_t *src, uint8_t len) {
+    if ( (nullptr == src) || (0 == len) ) return;
+    if (CHARGERGW_CHARGER_FRAME_ID == canFrameID) {
+        chargergw_charger_t tmp;
+        if (0 == chargergw_charger_unpack(&tmp, src, len)) {
+            opendlv::proxy::Charger msg;
+            msg.voltage2(chargergw_charger_voltage2_decode(tmp.voltage2));
+            msg.current2(chargergw_charger_current2_decode(tmp.current2));
+            // The following block is automatically added to demonstrate how to display the received values.
+            {
+                std::stringstream sstr;
+                msg.accept([](uint32_t, const std::string &, const std::string &) {},
+                           [&sstr](uint32_t, std::string &&, std::string &&n, auto v) { sstr << n << " = " << v << '\n'; },
+                           []() {});
+                std::cout << sstr.str() << std::endl;
+            }
+        }
+    }
+}
